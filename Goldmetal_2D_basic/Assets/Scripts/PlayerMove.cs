@@ -9,12 +9,16 @@ public class PlayerMove : MonoBehaviour
     Rigidbody2D rigid;
     SpriteRenderer spriteRenderer;
     Animator anim;
+    public GameManager gameManager;
+
+    BoxCollider2D boxCollider2D;
 
     void Awake()
     {
         rigid = GetComponent<Rigidbody2D>();
         spriteRenderer = GetComponent<SpriteRenderer>();
         anim = GetComponent<Animator>();
+        boxCollider2D = GetComponent<BoxCollider2D>();
     }
 
     void Update()
@@ -31,7 +35,7 @@ public class PlayerMove : MonoBehaviour
         }
 
         // Drirection Sprite
-        if(Input.GetButtonDown("Horizontal")){
+        if(Input.GetButton("Horizontal")){
             spriteRenderer.flipX = Input.GetAxisRaw("Horizontal") == -1;
         }
 
@@ -67,5 +71,90 @@ public class PlayerMove : MonoBehaviour
                 }
             }
         }
+    }
+
+    void OnCollisionEnter2D(Collision2D collision)
+    {
+        if(collision.gameObject.tag == "Enemy"){
+            // 머리 위에서 밟을 경우
+            if(rigid.velocity.y < 0 && transform.position.y > collision.transform.position.y){
+                OnAttack(collision.transform);
+            } else { // 플레이어가 데미지를 받을 경우
+                OnDamaged(collision.transform.position);
+            }
+        }
+    }
+
+    void OnTriggerEnter2D(Collider2D collision)
+    {
+        if(collision.gameObject.tag == "Item"){
+            // Point
+            bool isBronze = collision.gameObject.name.Contains("Bronze");
+            bool isSilver = collision.gameObject.name.Contains("Silver");
+            bool isGold = collision.gameObject.name.Contains("Gold");
+            if(isBronze) {
+                gameManager.stagePoint+=50;
+            } else if(isSilver){
+                gameManager.stagePoint+=100;
+            } else if(isGold){
+                gameManager.stagePoint+=300;
+            }
+            // 아이템 사라지기
+            collision.gameObject.SetActive(false);
+        } else if(collision.gameObject.tag == "Finish"){
+            // 다음 스테이지
+            gameManager.NextStage();
+        }
+    }
+
+    void OnAttack(Transform enemy)
+    {
+        // Point
+        gameManager.stagePoint+=100;
+        // Enemy Die
+        EnemyMove enemyMove = enemy.GetComponent<EnemyMove>();
+        rigid.AddForce(Vector2.up * 11, ForceMode2D.Impulse);
+        enemyMove.Ondamaged();
+    }
+
+    // 맞았을떄
+    void OnDamaged(Vector2 targetPos)
+    {
+        // 체력 감소
+        gameManager.HealthDown();
+        // 레이어 변경
+        gameObject.layer = 9;
+        // 색깔 변경
+        spriteRenderer.color = new Color(1, 1, 1, 0.4f);
+        // 밀려나기
+        int dirc = transform.position.x - targetPos.x > 0 ? 1 : -1;
+        rigid.AddForce(new Vector2(dirc, 1)*9, ForceMode2D.Impulse);
+        // Animation
+        anim.SetTrigger("doDamaged");
+        // 무적 풀기
+        Invoke("OffDamaged", 3);     
+    }
+
+    void OffDamaged(){
+        // 레이어 변경
+        gameObject.layer = 8;
+
+        // 색깔 변경
+        spriteRenderer.color = new Color(1, 1, 1, 1);
+    }
+
+    public void onDie(){
+        // 색 변환
+        spriteRenderer.color = new Color(1, 1, 1, 0.4f);
+        //좌우 반전
+        spriteRenderer.flipY = true;
+        // 바닥 아래로 추락
+        boxCollider2D.enabled = false;
+        // 뛰어오르기
+        rigid.AddForce(Vector2.up * 5, ForceMode2D.Impulse);
+    }
+
+    public void VelocityZero(){
+        rigid.velocity = Vector2.zero;
     }
 }
