@@ -4,14 +4,20 @@ using UnityEngine;
 
 public class PlayerMove : MonoBehaviour
 {
+    public GameManager gameManager;
+    public AudioClip audioJump;
+    public AudioClip audioAttack;
+    public AudioClip audioDamaged;
+    public AudioClip audioItem;
+    public AudioClip audioDie;
+    public AudioClip audioFinish;
     public float maxSpeed;
     public float jumpPower;
     Rigidbody2D rigid;
     SpriteRenderer spriteRenderer;
-    Animator anim;
-    public GameManager gameManager;
-
     BoxCollider2D boxCollider2D;
+    Animator anim;
+    AudioSource audioSource;
 
     void Awake()
     {
@@ -19,6 +25,31 @@ public class PlayerMove : MonoBehaviour
         spriteRenderer = GetComponent<SpriteRenderer>();
         anim = GetComponent<Animator>();
         boxCollider2D = GetComponent<BoxCollider2D>();
+        audioSource = GetComponent<AudioSource>();
+    }
+
+    void PlaySound(string action)
+    {
+        switch(action){
+            case("JUMP"):
+                audioSource.clip = audioJump;
+                break;
+            case("ATTACK"):
+                audioSource.clip = audioAttack;
+                break;
+            case("DAMAGED"):
+                audioSource.clip = audioDamaged;
+                break;
+            case("ITEM"):
+                audioSource.clip = audioItem;
+                break;
+            case("DIE"):
+                audioSource.clip = audioDie;
+                break;
+            case("FINISH"):
+                audioSource.clip = audioFinish;
+                break;
+        }
     }
 
     void Update()
@@ -27,6 +58,8 @@ public class PlayerMove : MonoBehaviour
         if(Input.GetButtonDown("Jump") && !anim.GetBool("isJumping")){
             rigid.AddForce(Vector2.up * jumpPower, ForceMode2D.Impulse);
             anim.SetBool("isJumping", true);
+            PlaySound("JUMP");
+            audioSource.Play();
         }
 
         // Set Stop Speed
@@ -101,9 +134,15 @@ public class PlayerMove : MonoBehaviour
             }
             // 아이템 사라지기
             collision.gameObject.SetActive(false);
+            // 소리 재생
+            PlaySound("ITEM");
+            audioSource.Play();
         } else if(collision.gameObject.tag == "Finish"){
             // 다음 스테이지
             gameManager.NextStage();
+            // 소리 재생
+            PlaySound("FINISH");
+            audioSource.Play();
         }
     }
 
@@ -115,6 +154,9 @@ public class PlayerMove : MonoBehaviour
         EnemyMove enemyMove = enemy.GetComponent<EnemyMove>();
         rigid.AddForce(Vector2.up * 11, ForceMode2D.Impulse);
         enemyMove.Ondamaged();
+        //소리 재생
+        PlaySound("ATTACK");
+        audioSource.Play();
     }
 
     // 맞았을떄
@@ -132,7 +174,10 @@ public class PlayerMove : MonoBehaviour
         // Animation
         anim.SetTrigger("doDamaged");
         // 무적 풀기
-        Invoke("OffDamaged", 3);     
+        Invoke("OffDamaged", 3);  
+        // 소리 재생
+        PlaySound("DAMAGED");   
+        audioSource.Play();
     }
 
     void OffDamaged(){
@@ -152,6 +197,9 @@ public class PlayerMove : MonoBehaviour
         boxCollider2D.enabled = false;
         // 뛰어오르기
         rigid.AddForce(Vector2.up * 5, ForceMode2D.Impulse);
+        // 소리 재생
+        PlaySound("DIE");
+        audioSource.Play();
     }
 
     public void VelocityZero(){
